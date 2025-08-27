@@ -523,6 +523,16 @@ class LocalizationUnittests(unittest.TestCase):
         d = el.WrapPointList(s, "en-us")
         self.assertFalse(d.GetLinebreakPoints())
 
+    def testWrapPointsForTextWithInvalidUnicodeCharacters(self):
+        """ See https://ccpgames.atlassian.net/browse/PLAT-9947
+        """
+        # the sample text was extracted from the input that caused the crash
+        text = u' \ud83d Spieler, die Lust auf Mining, Produktion oder PVE haben'
+        with self.assertRaises(SystemError):
+            # construction now raises a SystemError instead of silently creating a nullptr
+            d = el.WrapPointList(text, "en-us")
+            # this line should no longer get executed, but it is what caused the crash initially
+            d.GetLinebreakPoints()
 
 if __name__ == '__main__':
     unittest.main()
