@@ -157,8 +157,18 @@ PyObject* Py__init__(PyObject *self, PyObject *args)
 	}
 #elif defined( __APPLE__ )
     pThis->m_coreString = ToStringRef( reinterpret_cast<const wchar_t*>( textStr ), size_t( textLength ) );
+    if ( ! pThis->m_coreString )
+    {
+        PyErr_SetString( PyExc_SystemError, "Text analysis failed, cannot convert to string." );
+        return nullptr;
+    }
     AutoReleaseCF<CFStringRef> name = ToStringRef( LanguageIDToCode( CodeToLanguageID( langStr ) ) );
     pThis->m_coreLocale = CFLocaleCreate( nullptr, name );
+    if ( ! pThis->m_coreLocale )
+    {
+        PyErr_SetString( PyExc_SystemError, "Text analysis failed, cannot create locale." );
+        return nullptr;
+    }
 #endif
 	Py_RETURN_NONE;
 };
