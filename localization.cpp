@@ -5,6 +5,10 @@
 
 #include "localization.h"
 
+#include <codecvt>
+#include <string>
+#include <type_traits>
+
 #include "parser.h"
 
 const char* g_moduleName = "_evelocalization";
@@ -545,6 +549,26 @@ switch( languageID )
 std::wstring PyUnicodeToWString( PyObject* unicode )
 {
     return std::wstring( reinterpret_cast<const wchar_t*>( PyUnicode_AS_UNICODE( unicode ) ), PyUnicode_GET_SIZE( unicode ) );
+}
+
+bool UTF8ToWString(const std::string& str, std::wstring& out) {
+    try {
+        std::wstring_convert<std::conditional_t<sizeof(wchar_t) == 4, std::codecvt_utf8<wchar_t>, std::codecvt_utf8_utf16<wchar_t>>> converter;
+        out = converter.from_bytes(str);
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+bool WStringToUTF8(const std::wstring& wstr, std::string& out) {
+    try {
+        std::wstring_convert<std::conditional_t<sizeof(wchar_t) == 4, std::codecvt_utf8<wchar_t>, std::codecvt_utf8_utf16<wchar_t>>> converter;
+        out = converter.to_bytes(wstr);
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 #ifdef __APPLE__

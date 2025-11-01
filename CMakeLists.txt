@@ -18,8 +18,14 @@ file(TO_CMAKE_PATH "$ENV{CCP_EVE_PERFORCE_BRANCH_PATH}" BRANCH_ROOT_DIR)
 list(INSERT CMAKE_MODULE_PATH 0 ${BRANCH_ROOT_DIR}/cmake)
 include(CcpGlobalSettings)
 
+option(USE_FLATBUFFERS "Enable FlatBuffers support for message loading" OFF)
+
 find_package(Blue CONFIG REQUIRED)
 find_package(BlueExposure CONFIG REQUIRED)
+
+if(USE_FLATBUFFERS)
+    find_package(flatbuffers CONFIG REQUIRED)
+endif()
 
 set(headers
     autoversion.h
@@ -30,6 +36,10 @@ set(headers
     version.h
     WrapPointList.h
 )
+
+if(USE_FLATBUFFERS)
+    list(APPEND headers messages_generated.h)
+endif()
 
 set(sources
     collator.cpp
@@ -50,6 +60,11 @@ add_library(EveLocalization SHARED
     ${sources}
 )
 target_link_libraries(EveLocalization PRIVATE Blue BlueExposure)
+
+if(USE_FLATBUFFERS)
+    target_link_libraries(EveLocalization PRIVATE flatbuffers::flatbuffers)
+    target_compile_definitions(EveLocalization PRIVATE USE_FLATBUFFERS)
+endif()
 
 target_precompile_headers(EveLocalization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/stdafx.h)
 target_include_directories(EveLocalization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

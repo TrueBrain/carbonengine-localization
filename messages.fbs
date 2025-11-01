@@ -1,0 +1,77 @@
+namespace eve.localization;
+
+table Metadata {
+    property_name: string; // e.g.: article, genitiveArticle, gender, etc.
+    text: string;
+}
+
+table KwargNumber {
+    value: uint8; // Yes, there doesn't seem to be floats or any values above 255 or below 0.
+}
+
+table KwargString {
+    value: string;
+}
+
+union KwargValue {
+    // Interrogating the pickle that is creataed for the native code, only strings or integers are expressed.
+    KwargNumber,
+    KwargString
+}
+
+table Kwarg {
+    key: string;
+    value: KwargValue;
+}
+
+// See https://github.com/ccpgames/carbon-localization/blob/1519c92172fd892cd3c17c84cdabcfde2efb3689/localization.h#L44-L58
+enum VariableTypes: byte {
+    character = 0,
+    npcOrganization,
+    item,
+    location,
+    characterlist,
+    messageid,
+    datetime,
+    formattedtime,
+    timeinterval,
+    numeric,
+    generic,
+}
+
+enum ArgFlag: uint16{
+    linkify = 1,
+    capitalize = 2,
+    uppercase = 4,
+    lowercase = 8,
+    titlecase = 16,
+    useGrouping = 32,
+    conditional = 64,
+    // I don't think the below is used as I couldn't find any tokens that had args which went over 255
+    quantity = 256,
+    decimalPlaces = 512,
+    leadingZeroes = 1024
+}
+
+table Token {
+    markup: string;
+    variable_type: VariableTypes;
+    variable_name: string;
+    property_name: string;
+    args: uint16;
+    kwargs: [Kwarg];
+    conditional_values: [string];
+}
+
+table Message {
+    id: uint64 (key); // Squential identifier for localization message.
+    text: string; // Localized text
+    tokens: [Token];
+    metadata: [Metadata];
+}
+
+table AllMessages {
+    messages: [Message];
+}
+
+root_type AllMessages;
