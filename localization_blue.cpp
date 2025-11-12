@@ -5,9 +5,7 @@
 #include <vector>
 
 #include "localization.h"
-#ifdef USE_FLATBUFFERS
 #include "messages_generated.h"
-#endif
 #include "parser.h"
 
 const Be::VarChooser TokenFlagChooser[] =
@@ -192,7 +190,6 @@ PyObject* PyLoadMessageData( PyObject* module, PyObject* args )
 }
 MAP_FUNCTION( "LoadMessageData", PyLoadMessageData, "Load the message data we are operating on." );
 
-#ifdef USE_FLATBUFFERS
 // -------------------------------------------------------------
 // Description:
 //   Converts a flatbuffer VariableTypes enum to an eveLocalization
@@ -562,7 +559,6 @@ PyObject* PyLoadMessageDataFromFlatbufferFile( PyObject* module, PyObject* args 
 	Py_RETURN_NONE;
 }
 MAP_FUNCTION( "LoadMessageDataFromFlatbufferFile", PyLoadMessageDataFromFlatbufferFile, "Load the message data we are operating on from a flatbuffer file." );
-#endif
 
 // -------------------------------------------------------------
 // Description:
