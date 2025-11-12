@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 
 project(EveLocalization VERSION 1.0.0)
 
+option(BUILD_FLATBUFFERS_TEST_DATA_GENERATOR "Build the flatbuffers test data generator tool" OFF)
+
 if(NOT DEFINED ENV{CCP_EVE_PERFORCE_BRANCH_PATH})
     message(FATAL_ERROR "Missing required environment variable CCP_EVE_PERFORCE_BRANCH_PATH")
 elseif(NOT IS_ABSOLUTE $ENV{CCP_EVE_PERFORCE_BRANCH_PATH})
@@ -95,4 +97,12 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
         PATTERN "*.py"
         PATTERN "package.yaml"
     )
+endif()
+
+if(BUILD_FLATBUFFERS_TEST_DATA_GENERATOR)
+    add_executable(generate_flatbuffers_test_data
+        generate_flatbuffers_test_data.cpp
+    )
+    target_link_libraries(generate_flatbuffers_test_data PRIVATE flatbuffers::flatbuffers)
+    target_include_directories(generate_flatbuffers_test_data PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
