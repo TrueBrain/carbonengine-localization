@@ -562,6 +562,62 @@ MAP_FUNCTION( "LoadMessageDataFromFlatbufferFile", PyLoadMessageDataFromFlatbuff
 
 // -------------------------------------------------------------
 // Description:
+//   Loads flatbuffer message data from a Python buffer object, then creates or updates the
+//   eveLocalization storage for the given language.
+// Arguments:
+//   module - Ignored
+//   args - The language for which we provide the messages and a buffer-compatible
+//   Python object containing the flatbuffer data.
+// Return value:
+//   None.
+// -------------------------------------------------------------
+PyObject* PyLoadMessageDataFromFlatbufferMemory( PyObject* module, PyObject* args )
+{
+	CCP_STATS_ZONE( __FUNCTION__ );
+
+	char* languageCode = 0;
+	Py_buffer buffer;
+
+	if ( ! PyArg_ParseTuple( args, "ss*", &languageCode, &buffer ) )
+	{
+		return NULL;
+	}
+
+	// Verify the flatbuffer data
+	flatbuffers::Verifier verifier( reinterpret_cast<const uint8_t*>( buffer.buf ), buffer.len );
+	if ( ! eve::localization::VerifyAllMessagesBuffer( verifier ) )
+	{
+		PyBuffer_Release( &buffer );
+		PyErr_SetString( PyExc_ValueError, "Flatbuffer data failed verification" );
+		return NULL;
+	}
+
+	// Get the root messages object
+	const eve::localization::AllMessages* allMessages = eve::localization::GetAllMessages( buffer.buf );
+	if ( ! allMessages )
+	{
+		PyBuffer_Release( &buffer );
+		PyErr_SetString( PyExc_ValueError, "Failed to get the root object from the flatbuffer" );
+		return NULL;
+	}
+
+	if ( ! allMessages->messages() || allMessages->messages()->size() == 0 )
+	{
+		PyBuffer_Release( &buffer );
+		PyErr_SetString( PyExc_ValueError, "Flatbuffer does not contain any messages" );
+		return NULL;
+	}
+
+	LoadMessageDataFromFlatbufferObject( languageCode, allMessages );
+
+	PyBuffer_Release( &buffer );
+
+	Py_RETURN_NONE;
+}
+MAP_FUNCTION( "LoadMessageDataFromFlatbufferMemory", PyLoadMessageDataFromFlatbufferMemory, "Load the message data we are operating on from a flatbuffer buffer." );
+
+// -------------------------------------------------------------
+// Description:
 //   Clear the whole eveLocalization storage.
 // Arguments:
 //   module - Ignored
