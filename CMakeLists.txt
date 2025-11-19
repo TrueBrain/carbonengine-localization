@@ -24,12 +24,19 @@ find_package(Blue CONFIG REQUIRED)
 find_package(BlueExposure CONFIG REQUIRED)
 find_package(flatbuffers CONFIG REQUIRED)
 
+flatbuffers_generate_headers(
+    TARGET FlatbuffersGeneratedHeaders
+    SCHEMAS ${CMAKE_CURRENT_SOURCE_DIR}/messages.fbs
+)
+target_include_directories(FlatbuffersGeneratedHeaders INTERFACE 
+    ${CMAKE_CURRENT_BINARY_DIR}/FlatbuffersGeneratedHeaders
+)
+
 set(headers
     autoversion.h
     collator.h
     formatters.h
     localization.h
-    messages_generated.h
     parser.h
     version.h
     WrapPointList.h
@@ -53,7 +60,7 @@ add_library(EveLocalization SHARED
     ${headers}
     ${sources}
 )
-target_link_libraries(EveLocalization PRIVATE Blue BlueExposure flatbuffers::flatbuffers)
+target_link_libraries(EveLocalization PRIVATE Blue BlueExposure flatbuffers::flatbuffers FlatbuffersGeneratedHeaders)
 
 target_precompile_headers(EveLocalization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/stdafx.h)
 target_include_directories(EveLocalization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -103,6 +110,7 @@ if(BUILD_FLATBUFFERS_TEST_DATA_GENERATOR)
     add_executable(generate_flatbuffers_test_data
         generate_flatbuffers_test_data.cpp
     )
-    target_link_libraries(generate_flatbuffers_test_data PRIVATE flatbuffers::flatbuffers)
+    target_link_libraries(generate_flatbuffers_test_data PRIVATE flatbuffers::flatbuffers FlatbuffersGeneratedHeaders)
     target_include_directories(generate_flatbuffers_test_data PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
+
