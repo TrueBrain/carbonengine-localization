@@ -22,7 +22,16 @@ include(CcpGlobalSettings)
 
 find_package(Blue CONFIG REQUIRED)
 find_package(BlueExposure CONFIG REQUIRED)
-find_package(flatbuffers CONFIG REQUIRED)
+
+include(FetchContent)
+
+FetchContent_Declare(
+    flatbuffers
+    GIT_REPOSITORY https://github.com/google/flatbuffers
+    GIT_TAG        v25.2.10
+)
+
+FetchContent_MakeAvailable(flatbuffers)
 
 flatbuffers_generate_headers(
     TARGET FlatbuffersGeneratedHeaders
@@ -60,7 +69,7 @@ add_library(EveLocalization SHARED
     ${headers}
     ${sources}
 )
-target_link_libraries(EveLocalization PRIVATE Blue BlueExposure flatbuffers::flatbuffers FlatbuffersGeneratedHeaders)
+target_link_libraries(EveLocalization PRIVATE Blue BlueExposure flatbuffers FlatbuffersGeneratedHeaders)
 
 target_precompile_headers(EveLocalization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/stdafx.h)
 target_include_directories(EveLocalization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -110,7 +119,7 @@ if(BUILD_FLATBUFFERS_TEST_DATA_GENERATOR)
     add_executable(generate_flatbuffers_test_data
         generate_flatbuffers_test_data.cpp
     )
-    target_link_libraries(generate_flatbuffers_test_data PRIVATE flatbuffers::flatbuffers FlatbuffersGeneratedHeaders)
+    target_link_libraries(generate_flatbuffers_test_data PRIVATE flatbuffers FlatbuffersGeneratedHeaders)
     target_include_directories(generate_flatbuffers_test_data PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
