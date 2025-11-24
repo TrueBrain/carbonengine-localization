@@ -1,0 +1,17 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e7038f89..a269fdab 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -453,12 +453,6 @@ if(FLATBUFFERS_BUILD_FLATC)
+   endif()
+ 
+   target_link_libraries(flatc PRIVATE $<BUILD_INTERFACE:ProjectConfig>)
+-  target_compile_options(flatc
+-    PRIVATE
+-      $<$<AND:$<BOOL:${MSVC_LIKE}>,$<CONFIG:Release>>:
+-        /MT
+-      >
+-  )
+ 
+   if(FLATBUFFERS_CODE_SANITIZE AND NOT WIN32)
+     add_fsanitize_to_target(flatc ${FLATBUFFERS_CODE_SANITIZE})
