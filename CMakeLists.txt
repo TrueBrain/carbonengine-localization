@@ -39,9 +39,6 @@ flatbuffers_generate_headers(
     TARGET FlatbuffersGeneratedHeaders
     SCHEMAS ${CMAKE_CURRENT_SOURCE_DIR}/messages.fbs
 )
-target_include_directories(FlatbuffersGeneratedHeaders INTERFACE 
-    ${CMAKE_CURRENT_BINARY_DIR}/FlatbuffersGeneratedHeaders
-)
 
 set(headers
     autoversion.h
