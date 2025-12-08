@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include <StringConversions.h>
+
 #include "localization.h"
 #include "messages_generated.h"
 #include "parser.h"
@@ -267,10 +269,7 @@ void LoadMessageDataFromFlatbufferObject( const char* languageCode, const eve::l
 		std::wstring msgText;
 		if ( fbMessage.text() )
 		{
-			if ( !UTF8ToWString( fbMessage.text()->str(), msgText ) )
-			{
-				msgText.clear();
-			}
+			msgText = UTF8ToWide( fbMessage.text()->str() );
 		}
 		md->text = msgText;
 
@@ -283,10 +282,9 @@ void LoadMessageDataFromFlatbufferObject( const char* languageCode, const eve::l
 				if ( fbMeta->property_name() && fbMeta->text() )
 				{
 					std::string propertyName = fbMeta->property_name()->str();
-					std::wstring text;
-					if ( UTF8ToWString( fbMeta->text()->str(), text ) )
+					if ( fbMeta->text() )
 					{
-						metaData->insert( MetaData::value_type( propertyName, text ) );
+						metaData->insert( MetaData::value_type( propertyName, UTF8ToWide( fbMeta->text()->str() ) ) );
 					}
 				}
 			}
@@ -305,11 +303,7 @@ void LoadMessageDataFromFlatbufferObject( const char* languageCode, const eve::l
 				std::wstring markup;
 				if ( fbToken->markup() )
 				{
-					if ( !UTF8ToWString( fbToken->markup()->str(), markup ) )
-					{
-						CCP_DELETE token;
-						continue;
-					}
+					markup = UTF8ToWide( fbToken->markup()->str() );
 				}
 				else
 				{
@@ -386,11 +380,7 @@ void LoadMessageDataFromFlatbufferObject( const char* languageCode, const eve::l
 						const flatbuffers::String* cv = fbToken->conditional_values()->Get( i );
 						if ( cv )
 						{
-							std::wstring value;
-							if ( UTF8ToWString( cv->str(), value ) )
-							{
-								token->conditionalValues[i] = value;
-							}
+							token->conditionalValues[i] = UTF8ToWide( cv->str() );
 						}
 					}
 				}

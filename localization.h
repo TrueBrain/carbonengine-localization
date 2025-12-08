@@ -312,8 +312,6 @@ extern size_t FormatNumber( wchar_t (&out)[STACK_BUFFER_SIZE_LARGE], PyObject* v
 
 
 std::wstring PyUnicodeToWString( PyObject* unicode );
-bool UTF8ToWString(const std::string& str, std::wstring& out);
-bool WStringToUTF8(const std::wstring& wstr, std::string& out);
 
 #ifdef __APPLE__
 CFStringRef ToStringRef( const char* string );

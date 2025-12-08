@@ -22,6 +22,7 @@ include(CcpGlobalSettings)
 
 find_package(Blue CONFIG REQUIRED)
 find_package(BlueExposure CONFIG REQUIRED)
+find_package(CcpCore CONFIG REQUIRED)
 
 include(FetchContent)
 
@@ -70,7 +71,7 @@ add_library(EveLocalization SHARED
     ${headers}
     ${sources}
 )
-target_link_libraries(EveLocalization PRIVATE Blue BlueExposure flatbuffers FlatbuffersGeneratedHeaders)
+target_link_libraries(EveLocalization PRIVATE Blue BlueExposure CcpCore flatbuffers FlatbuffersGeneratedHeaders)
 
 target_precompile_headers(EveLocalization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/stdafx.h)
 target_include_directories(EveLocalization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
