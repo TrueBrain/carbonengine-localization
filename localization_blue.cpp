@@ -201,32 +201,43 @@ MAP_FUNCTION( "LoadMessageData", PyLoadMessageData, "Load the message data we ar
 // Return value:
 //   The corresponding eveLocalization VariableType enum value.
 // -------------------------------------------------------------
-VariableType ConvertVariableType(eve::localization::VariableTypes fbType) {
+bool ConvertVariableType(eve::localization::VariableTypes fbType, VariableType& outType) {
 	switch (fbType) {
 		case eve::localization::VariableTypes_character:
-			return VARIABLETYPE_CHARACTER;
+			outType = VARIABLETYPE_CHARACTER;
+			return true;
 		case eve::localization::VariableTypes_npcOrganization:
-			return VARIABLETYPE_NPCORGANIZATION;
+			outType = VARIABLETYPE_NPCORGANIZATION;
+			return true;
 		case eve::localization::VariableTypes_item:
-			return VARIABLETYPE_ITEM;
+			outType = VARIABLETYPE_ITEM;
+			return true;
 		case eve::localization::VariableTypes_location:
-			return VARIABLETYPE_LOCATION;
+			outType = VARIABLETYPE_LOCATION;
+			return true;
 		case eve::localization::VariableTypes_characterlist:
-			return VARIABLETYPE_CHARACTERLIST;
+			outType = VARIABLETYPE_CHARACTERLIST;
+			return true;
 		case eve::localization::VariableTypes_messageid:
-			return VARIABLETYPE_MESSAGE;
+			outType = VARIABLETYPE_MESSAGE;
+			return true;
 		case eve::localization::VariableTypes_datetime:
-			return VARIABLETYPE_DATETIME;
+			outType = VARIABLETYPE_DATETIME;
+			return true;
 		case eve::localization::VariableTypes_formattedtime:
-			return VARIABLETYPE_FORMATTEDTIME;
+			outType = VARIABLETYPE_FORMATTEDTIME;
+			return true;
 		case eve::localization::VariableTypes_timeinterval:
-			return VARIABLETYPE_TIMEINTERVAL;
+			outType = VARIABLETYPE_TIMEINTERVAL;
+			return true;
 		case eve::localization::VariableTypes_numeric:
-			return VARIABLETYPE_NUMERIC;
+			outType = VARIABLETYPE_NUMERIC;
+			return true;
 		case eve::localization::VariableTypes_generic:
-			return VARIABLETYPE_GENERIC;
+			outType = VARIABLETYPE_GENERIC;
+			return true;
 		default:
-			return VARIABLETYPE_GENERIC;
+			return false;
 	}
 }
 
@@ -313,7 +324,11 @@ void LoadMessageDataFromFlatbufferObject( const char* languageCode, const eve::l
 				token->tagName = markup;
 
 				// variableType
-				token->variableType = ConvertVariableType( fbToken->variable_type() );
+				if ( ! ConvertVariableType( fbToken->variable_type(), token->variableType ) )
+				{
+					CCP_DELETE token;
+					continue;
+				}
 
 				// variableName
 				if ( fbToken->variable_name() )
