@@ -253,8 +253,30 @@ bool ConvertVariableType(eve::localization::VariableTypes fbType, VariableType& 
 // Return value:
 //   None.
 // -------------------------------------------------------------
-void LoadMessageDataFromFlatbufferObject( const char* languageCode, const eve::localization::AllMessages* allMessages )
+bool LoadMessageDataFromFlatbufferObject( const char* languageCode, const uint8_t* buffer, size_t size )
 {
+	// Verify the flatbuffer data
+	flatbuffers::Verifier verifier( buffer, size );
+	if ( ! eve::localization::VerifyAllMessagesBuffer( verifier ) )
+	{
+		PyErr_SetString( PyExc_ValueError, "Flatbuffer file failed verification" );
+		return false;
+	}
+
+	// Get the root messages object
+	const eve::localization::AllMessages* allMessages = eve::localization::GetAllMessages( buffer );
+	if ( ! allMessages )
+	{
+		PyErr_SetString( PyExc_ValueError, "Failed to get the root object from the flatbuffer" );
+		return false;
+	}
+
+	if ( ! allMessages->messages() || allMessages->messages()->size() == 0 )
+	{
+		PyErr_SetString( PyExc_ValueError, "Flatbuffer does not contain any messages" );
+		return false;
+	}
+
 	const auto* fbMessages = allMessages->messages();
 
 	// Create the language object
@@ -489,7 +511,7 @@ void LoadMessageDataFromFlatbufferObject( const char* languageCode, const eve::l
 		g_settings.languages.insert( LanguageMap::value_type( langID, lang ) );
 	}
 
-	return;
+	return true;
 }
 
 // -------------------------------------------------------------
@@ -537,29 +559,10 @@ PyObject* PyLoadMessageDataFromFlatbufferFile( PyObject* module, PyObject* args 
 		return NULL;
 	}
 
-	// Verify the flatbuffer data
-	flatbuffers::Verifier verifier( reinterpret_cast<const uint8_t*>( buffer.data() ), buffer.size() );
-	if ( ! eve::localization::VerifyAllMessagesBuffer( verifier ) )
+	if ( ! LoadMessageDataFromFlatbufferObject( languageCode, reinterpret_cast<const uint8_t*>( buffer.data() ), buffer.size() ) )
 	{
-		PyErr_SetString( PyExc_ValueError, "Flatbuffer file failed verification" );
 		return NULL;
 	}
-
-	// Get the root messages object
-	const eve::localization::AllMessages* allMessages = eve::localization::GetAllMessages( buffer.data() );
-	if ( ! allMessages )
-	{
-		PyErr_SetString( PyExc_ValueError, "Failed to get the root object from the flatbuffer" );
-		return NULL;
-	}
-
-	if ( ! allMessages->messages() || allMessages->messages()->size() == 0 )
-	{
-		PyErr_SetString( PyExc_ValueError, "Flatbuffer does not contain any messages" );
-		return NULL;
-	}
-
-	LoadMessageDataFromFlatbufferObject( languageCode, allMessages );
 
 	Py_RETURN_NONE;
 }
@@ -588,34 +591,14 @@ PyObject* PyLoadMessageDataFromFlatbufferMemory( PyObject* module, PyObject* arg
 		return NULL;
 	}
 
-	// Verify the flatbuffer data
-	flatbuffers::Verifier verifier( reinterpret_cast<const uint8_t*>( buffer.buf ), buffer.len );
-	if ( ! eve::localization::VerifyAllMessagesBuffer( verifier ) )
-	{
-		PyBuffer_Release( &buffer );
-		PyErr_SetString( PyExc_ValueError, "Flatbuffer data failed verification" );
-		return NULL;
-	}
-
-	// Get the root messages object
-	const eve::localization::AllMessages* allMessages = eve::localization::GetAllMessages( buffer.buf );
-	if ( ! allMessages )
-	{
-		PyBuffer_Release( &buffer );
-		PyErr_SetString( PyExc_ValueError, "Failed to get the root object from the flatbuffer" );
-		return NULL;
-	}
-
-	if ( ! allMessages->messages() || allMessages->messages()->size() == 0 )
-	{
-		PyBuffer_Release( &buffer );
-		PyErr_SetString( PyExc_ValueError, "Flatbuffer does not contain any messages" );
-		return NULL;
-	}
-
-	LoadMessageDataFromFlatbufferObject( languageCode, allMessages );
+	bool result = LoadMessageDataFromFlatbufferObject( languageCode, reinterpret_cast<const uint8_t*>( buffer.buf ), buffer.len );
 
 	PyBuffer_Release( &buffer );
+
+	if ( ! result )
+	{
+		return NULL;
+	}
 
 	Py_RETURN_NONE;
 }
