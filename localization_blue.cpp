@@ -243,38 +243,49 @@ bool ConvertVariableType(eve::localization::VariableTypes fbType, VariableType& 
 
 // -------------------------------------------------------------
 // Description:
-//   Loads message data from a flatbuffer AllMessages object and creates or updates
-//   the eveLocalization storage for the given language. This function parses the
+//   Loads flatbuffer message data from a Python buffer object, then creates or updates the
+//   eveLocalization storage for the given language. This function parses the
 //   flatbuffer data structure and converts it to the internal MessageData format,
 //   including text, metadata, and tokens.
 // Arguments:
-//   languageCode - The language code for which we provide the messages.
-//   allMessages - Pointer to the flatbuffer AllMessages object containing the message data.
+//   module - Ignored
+//   args - The language for which we provide the messages and a buffer-compatible
+//   Python object containing the flatbuffer data.
 // Return value:
 //   None.
 // -------------------------------------------------------------
-bool LoadMessageDataFromFlatbufferObject( const char* languageCode, const uint8_t* buffer, size_t size )
+PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
 {
+	CCP_STATS_ZONE( __FUNCTION__ );
+
+	char* languageCode = 0;
+	Py_buffer buffer;
+
+	if ( ! PyArg_ParseTuple( args, "ss*", &languageCode, &buffer ) )
+	{
+		return nullptr;
+	}
+
 	// Verify the flatbuffer data
-	flatbuffers::Verifier verifier( buffer, size );
+	flatbuffers::Verifier verifier( reinterpret_cast<const uint8_t*>(buffer.buf), buffer.len );
 	if ( ! eve::localization::VerifyAllMessagesBuffer( verifier ) )
 	{
 		PyErr_SetString( PyExc_ValueError, "Flatbuffer file failed verification" );
-		return false;
+		return nullptr;
 	}
 
 	// Get the root messages object
-	const eve::localization::AllMessages* allMessages = eve::localization::GetAllMessages( buffer );
+	const eve::localization::AllMessages* allMessages = eve::localization::GetAllMessages( buffer.buf );
 	if ( ! allMessages )
 	{
 		PyErr_SetString( PyExc_ValueError, "Failed to get the root object from the flatbuffer" );
-		return false;
+		return nullptr;
 	}
 
 	if ( ! allMessages->messages() || allMessages->messages()->size() == 0 )
 	{
 		PyErr_SetString( PyExc_ValueError, "Flatbuffer does not contain any messages" );
-		return false;
+		return nullptr;
 	}
 
 	const auto* fbMessages = allMessages->messages();
@@ -511,40 +522,7 @@ bool LoadMessageDataFromFlatbufferObject( const char* languageCode, const uint8_
 		g_settings.languages.insert( LanguageMap::value_type( langID, lang ) );
 	}
 
-	return true;
-}
-
-// -------------------------------------------------------------
-// Description:
-//   Loads flatbuffer message data from a Python buffer object, then creates or updates the
-//   eveLocalization storage for the given language.
-// Arguments:
-//   module - Ignored
-//   args - The language for which we provide the messages and a buffer-compatible
-//   Python object containing the flatbuffer data.
-// Return value:
-//   None.
-// -------------------------------------------------------------
-PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
-{
-	CCP_STATS_ZONE( __FUNCTION__ );
-
-	char* languageCode = 0;
-	Py_buffer buffer;
-
-	if ( ! PyArg_ParseTuple( args, "ss*", &languageCode, &buffer ) )
-	{
-		return NULL;
-	}
-
-	bool result = LoadMessageDataFromFlatbufferObject( languageCode, reinterpret_cast<const uint8_t*>( buffer.buf ), buffer.len );
-
 	PyBuffer_Release( &buffer );
-
-	if ( ! result )
-	{
-		return NULL;
-	}
 
 	Py_RETURN_NONE;
 }
