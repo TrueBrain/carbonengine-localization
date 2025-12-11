@@ -5,9 +5,6 @@
 
 #include "localization.h"
 
-#include <string>
-#include <type_traits>
-
 #include "parser.h"
 
 const char* g_moduleName = "_evelocalization";
