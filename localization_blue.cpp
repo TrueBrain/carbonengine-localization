@@ -516,60 +516,6 @@ bool LoadMessageDataFromFlatbufferObject( const char* languageCode, const uint8_
 
 // -------------------------------------------------------------
 // Description:
-//   Reads flatbuffer message data from a file, then creates or updates the
-//   eveLocalization storage for the given language.
-// Arguments:
-//   module - Ignored
-//   args - The language for which we provide the messages and a filename to
-//   load the flatbuffer data from.
-// Return value:
-//   None.
-// -------------------------------------------------------------
-PyObject* PyLoadMessageDataFromFlatbufferFile( PyObject* module, PyObject* args )
-{
-	CCP_STATS_ZONE( __FUNCTION__ );
-
-	char* languageCode = 0;
-	char* filePath = 0;
-
-	if ( ! PyArg_ParseTuple( args, "ss", &languageCode, &filePath ) )
-	{
-		return NULL;
-	}
-
-	// Read the file
-	std::ifstream file( filePath, std::ios::binary | std::ios::ate );
-	if ( ! file.is_open() )
-	{
-		PyErr_SetString( PyExc_IOError, "Could not open flatbuffer file" );
-		return NULL;
-	}
-	std::streamsize size = file.tellg();
-	if ( size <= 0 )
-	{
-		PyErr_SetString( PyExc_IOError, "Flatbuffer file is empty or invalid" );
-		return NULL;
-	}
-	file.seekg( 0, std::ios::beg );
-
-	std::vector<char> buffer( size );
-	if ( ! file.read( buffer.data(), size ) )
-	{
-		PyErr_SetString( PyExc_IOError, "Could not read flatbuffer file" );
-		return NULL;
-	}
-
-	if ( ! LoadMessageDataFromFlatbufferObject( languageCode, reinterpret_cast<const uint8_t*>( buffer.data() ), buffer.size() ) )
-	{
-		return NULL;
-	}
-
-	Py_RETURN_NONE;
-}
-MAP_FUNCTION( "LoadMessageDataFromFlatbufferFile", PyLoadMessageDataFromFlatbufferFile, "Load the message data we are operating on from a flatbuffer file." );
-
-// -------------------------------------------------------------
-// Description:
 //   Loads flatbuffer message data from a Python buffer object, then creates or updates the
 //   eveLocalization storage for the given language.
 // Arguments:
@@ -579,7 +525,7 @@ MAP_FUNCTION( "LoadMessageDataFromFlatbufferFile", PyLoadMessageDataFromFlatbuff
 // Return value:
 //   None.
 // -------------------------------------------------------------
-PyObject* PyLoadMessageDataFromFlatbufferMemory( PyObject* module, PyObject* args )
+PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
 {
 	CCP_STATS_ZONE( __FUNCTION__ );
 
@@ -602,7 +548,7 @@ PyObject* PyLoadMessageDataFromFlatbufferMemory( PyObject* module, PyObject* arg
 
 	Py_RETURN_NONE;
 }
-MAP_FUNCTION( "LoadMessageDataFromFlatbufferMemory", PyLoadMessageDataFromFlatbufferMemory, "Load the message data we are operating on from a flatbuffer buffer." );
+MAP_FUNCTION( "LoadMessageDataFromFlatbuffer", PyLoadMessageDataFromFlatbuffer, "Load the message data we are operating on from a flatbuffer buffer." );
 
 // -------------------------------------------------------------
 // Description:

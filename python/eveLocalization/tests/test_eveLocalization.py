@@ -341,14 +341,14 @@ class LocalizationUnittests(unittest.TestCase):
         data = el.GetMessageDataByID(2, "en-us")
         self.assertTrue(data == testData["en-us"][2], "message data storage does not return the same data for ID 2.")
 
-    def testLoadingFlatbufferDataFromMemory(self):
+    def testLoadingFlatbufferData(self):
         """
         Test loading message data from a flatbuffer byte array in memory
         """
         test_flatbuffer_data = GetFlatbufferTestData()
         
         # Load the flatbuffer data from memory
-        el.LoadMessageDataFromFlatbufferMemory("en-us", test_flatbuffer_data)
+        el.LoadMessageDataFromFlatbuffer("en-us", test_flatbuffer_data)
         
         # Test Message 0: Simple message with no tags
         self.assertTrue(el.IsValidMessageID(0, "en-us"), "Message ID 0 should exist")
@@ -382,16 +382,9 @@ class LocalizationUnittests(unittest.TestCase):
         self.assertEqual(result, expectedResult,
                         "Message 3 text mismatch: %s != %s" % (result, expectedResult))
 
-    def testLoadingFlatbufferDataFromFileFailures(self):
+    def testLoadingFlatbufferDataFailures(self):
         """
-        Test error handling for LoadMessageDataFromFlatbufferFile
-        """
-        self.assertRaises(IOError, el.LoadMessageDataFromFlatbufferFile, 
-                         "en-us", "/nonexistent/path/to/file.bin")
-
-    def testLoadingFlatbufferDataFromMemoryFailures(self):
-        """
-        Test error handling for LoadMessageDataFromFlatbufferMemory
+        Test error handling for LoadMessageDataFromFlatbuffer
         """
         # Empty buffer
         empty_buffer = bytearray([])
