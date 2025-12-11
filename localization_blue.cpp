@@ -270,7 +270,7 @@ PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
 	flatbuffers::Verifier verifier( reinterpret_cast<const uint8_t*>(buffer.buf), buffer.len );
 	if ( ! eve::localization::VerifyAllMessagesBuffer( verifier ) )
 	{
-		PyErr_SetString( PyExc_ValueError, "Flatbuffer file failed verification" );
+		PyErr_SetString( PyExc_ValueError, "Flatbuffer data failed verification" );
 		return nullptr;
 	}
 
@@ -300,7 +300,8 @@ PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
 	{
 		if ( ! fbMessagePtr )
 		{
-			continue;
+			PyErr_SetString( PyExc_ValueError, "Encountered a null message pointer while iterating through messages" );
+			return nullptr;
 		}
 		const auto& fbMessage = *fbMessagePtr;
 
@@ -352,7 +353,8 @@ PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
 				else
 				{
 					CCP_DELETE token;
-					continue;
+					PyErr_SetString( PyExc_ValueError, "Encountered a null markup pointer while processing tokens" );
+					return nullptr;
 				}
 				token->tagName = markup;
 
@@ -360,7 +362,8 @@ PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
 				if ( ! ConvertVariableType( fbToken->variable_type(), token->variableType ) )
 				{
 					CCP_DELETE token;
-					continue;
+					PyErr_SetString( PyExc_ValueError, "Failed to convert variable type while processing tokens" );
+					return nullptr;
 				}
 
 				// variableName
@@ -387,7 +390,8 @@ PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
 					{
 						if ( ! fbKwarg->key() || ! fbKwarg->value() )
 						{
-							continue;
+							PyErr_SetString( PyExc_ValueError, "Encountered a null key or value pointer while processing kwargs" );
+							return nullptr;
 						}
 
 						std::string key = fbKwarg->key()->str();
@@ -410,7 +414,8 @@ PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
 						}
 						else
 						{
-							continue;
+							PyErr_SetString( PyExc_ValueError, "Encountered an unknown kwarg value type while processing kwargs" );
+							return nullptr;
 						}
 
 						if ( value )
