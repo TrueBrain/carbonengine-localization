@@ -388,12 +388,12 @@ class LocalizationUnittests(unittest.TestCase):
         """
         # Empty buffer
         empty_buffer = bytearray([])
-        self.assertRaises(ValueError, el.LoadMessageDataFromFlatbufferMemory,
+        self.assertRaises(ValueError, el.LoadMessageDataFromFlatbuffer,
                          "en-us", empty_buffer)
         
         # Invalid flatbuffer data
         invalid_buffer = bytearray([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09])
-        self.assertRaises(ValueError, el.LoadMessageDataFromFlatbufferMemory,
+        self.assertRaises(ValueError, el.LoadMessageDataFromFlatbuffer,
                          "en-us", invalid_buffer)
         
         # Valid flatbuffer structure but no messages
@@ -401,7 +401,7 @@ class LocalizationUnittests(unittest.TestCase):
             0x0c, 0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x08, 0x00, 0x04, 0x00, 0x06, 0x00, 0x00, 0x00, 
             0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
         ])
-        self.assertRaises(ValueError, el.LoadMessageDataFromFlatbufferMemory,
+        self.assertRaises(ValueError, el.LoadMessageDataFromFlatbuffer,
                          "en-us", empty_messages_buffer)
 
     def testParser(self):

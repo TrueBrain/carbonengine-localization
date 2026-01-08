@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include <CcpScopeGuard.h>
 #include <StringConversions.h>
 
 #include "localization.h"
@@ -107,6 +108,7 @@ PyObject* PyLoadMessageData( PyObject* module, PyObject* args )
 			}
 
 			MessageData* md = CCP_NEW( "PyLoadMessageData/md" ) MessageData;
+			ScopeGuard mdGuard = MakeGuard([&] { CCP_DELETE md; });
 
 			// We use PyTuple_GET_ITEM for speed - we've already checked that we have a tuple
 			// and that it is of the correct size. Also remember that PyTuple_GET_ITEM returns
@@ -167,6 +169,7 @@ PyObject* PyLoadMessageData( PyObject* module, PyObject* args )
 			md->text = PyUnicodeToWString( text );
 
 			mm[id] = md;
+			mdGuard.Dismiss();
 		}
 
 		LanguageMap::iterator oldLang = g_settings.languages.find( langID );
@@ -306,6 +309,7 @@ PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
 		const auto& fbMessage = *fbMessagePtr;
 
 		MessageData* md = CCP_NEW( "PyLoadMessageDataFromFlatbuffer/MessageData" ) MessageData();
+		ScopeGuard mdGuard = MakeGuard([&] { CCP_DELETE md; });
 
 		// id
 		MessageID msgID = fbMessage.id();
@@ -503,6 +507,7 @@ PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
 		md->tokens = tokens;
 
 		mm[msgID] = md;
+		mdGuard.Dismiss();
 	}
 
 	// The language object is now populated, so we can insert it into g_settings,

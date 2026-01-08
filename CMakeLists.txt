@@ -29,8 +29,9 @@ include(FetchContent)
 FetchContent_Declare(
     flatbuffers
     GIT_REPOSITORY https://github.com/google/flatbuffers
-    GIT_TAG        v25.2.10
-    PATCH_COMMAND  git apply ${CMAKE_CURRENT_SOURCE_DIR}/flatc-dont-force-MT-flag.patch
+    GIT_TAG v25.2.10
+    PATCH_COMMAND   git apply -R --check ${CMAKE_CURRENT_SOURCE_DIR}/flatc-dont-force-MT-flag.patch
+                    || git apply ${CMAKE_CURRENT_SOURCE_DIR}/flatc-dont-force-MT-flag.patch
 )
 
 FetchContent_MakeAvailable(flatbuffers)
