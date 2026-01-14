@@ -34,6 +34,8 @@ FetchContent_Declare(
                     || git apply ${CMAKE_CURRENT_SOURCE_DIR}/flatc-dont-force-MT-flag.patch
 )
 
+set(FLATBUFFERS_INSTALL OFF CACHE BOOL "" FORCE)
+set(FLATBUFFERS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(flatbuffers)
 
 flatbuffers_generate_headers(
@@ -123,3 +125,4 @@ if(BUILD_FLATBUFFERS_TEST_DATA_GENERATOR)
     target_include_directories(generate_flatbuffers_test_data PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
+add_subdirectory(test_module)
