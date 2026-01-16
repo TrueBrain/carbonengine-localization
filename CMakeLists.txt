@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 3.30)
 
-# Propagate GENERATED property for generated files to subdirectories for flatbuffers
-cmake_policy(SET CMP0118 NEW)
-
 project(EveLocalization VERSION 1.0.0)
 
 if(NOT DEFINED ENV{CCP_EVE_PERFORCE_BRANCH_PATH})
