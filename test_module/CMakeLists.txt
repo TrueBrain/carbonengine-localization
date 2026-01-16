@@ -14,5 +14,5 @@ ccp_add_library(EveLocalizationTest SHARED
 # the custom generation target called GENERATE_<TARGET>.
 add_dependencies(EveLocalizationTest GENERATE_FlatbuffersGeneratedHeaders)
 
-target_link_libraries(EveLocalizationTest PRIVATE BlueExposure flatbuffers FlatbuffersGeneratedHeaders)
+target_link_libraries(EveLocalizationTest PRIVATE Blue BlueExposure flatbuffers FlatbuffersGeneratedHeaders)
 target_include_directories(EveLocalizationTest PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
