@@ -1,10 +1,10 @@
 #include <cstdio>
 #include <vector>
 
-#include "BlueExposure.h"
-
 #include "flatbuffers/flatbuffers.h"
 #include "messages_generated.h"
+
+#include "BlueExposure.h"
 
 PyObject* PyGenerateValidFlatbuffersTestData( PyObject* module, PyObject* args )
 {
