@@ -1,4 +1,7 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.30)
+
+# Propagate GENERATED property for generated files to subdirectories for flatbuffers
+cmake_policy(SET CMP0118 NEW)
 
 project(EveLocalization VERSION 1.0.0)
 
@@ -28,8 +31,7 @@ FetchContent_Declare(
     flatbuffers
     GIT_REPOSITORY https://github.com/google/flatbuffers
     GIT_TAG v25.2.10
-    PATCH_COMMAND   git apply -R --check ${CMAKE_CURRENT_SOURCE_DIR}/flatc-dont-force-MT-flag.patch
-                    || git apply ${CMAKE_CURRENT_SOURCE_DIR}/flatc-dont-force-MT-flag.patch
+    PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/flatc-dont-force-MT-flag.patch
 )
 
 set(FLATBUFFERS_INSTALL OFF CACHE BOOL "" FORCE)
