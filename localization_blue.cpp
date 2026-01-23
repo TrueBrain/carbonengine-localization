@@ -400,21 +400,28 @@ PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
 
 						std::string key = fbKwarg->key()->str();
 						PyObject* value = nullptr;
-						if ( fbKwarg->value_type() == eve::localization::KwargValue_KwargNumber && fbKwarg->value_as_KwargNumber() )
+						if ( fbKwarg->value_type() == eve::localization::KwargValue_KwargNumber )
 						{
-							value = PyLong_FromLongLong( fbKwarg->value_as_KwargNumber()->value() );
+							const eve::localization::KwargNumber* kwarg_number = fbKwarg->value_as_KwargNumber();
+							if( ! kwarg_number ) {
+								PyErr_SetString( PyExc_ValueError, "Encountered a null KwargNumber pointer while processing kwargs" );
+								return nullptr;
+							}
+							value = PyLong_FromLongLong( kwarg_number->value() );
 						}
 						else if ( fbKwarg->value_type() == eve::localization::KwargValue_KwargString )
 						{
-							if ( fbKwarg->value_as_KwargString() && fbKwarg->value_as_KwargString()->value() )
-							{
-								std::string strValue = fbKwarg->value_as_KwargString()->value()->str();
-								value = PyUnicode_FromStringAndSize( strValue.c_str(), strValue.size() );
+							const eve::localization::KwargString* kwarg_string = fbKwarg->value_as_KwargString();
+							if( ! kwarg_string ) {
+								PyErr_SetString( PyExc_ValueError, "Encountered a null KwargString pointer while processing kwargs" );
+								return nullptr;
 							}
-							else
-							{
-								value = PyUnicode_FromStringAndSize( "", 0 );
+							if( ! kwarg_string->value() ) {
+								PyErr_SetString( PyExc_ValueError, "Encountered a null KwargString value pointer while processing kwargs" );
+								return nullptr;
 							}
+							std::string strValue = kwarg_string->value()->str();
+							value = PyUnicode_FromStringAndSize( strValue.c_str(), strValue.size() );
 						}
 						else
 						{
