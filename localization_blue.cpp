@@ -1,5 +1,14 @@
 #include "stdafx.h"
+
+#include <fstream>
+#include <string>
+#include <vector>
+
+#include <CcpScopeGuard.h>
+#include <StringConversions.h>
+
 #include "localization.h"
+#include "messages_generated.h"
 #include "parser.h"
 
 const Be::VarChooser TokenFlagChooser[] =
@@ -99,6 +108,7 @@ PyObject* PyLoadMessageData( PyObject* module, PyObject* args )
 			}
 
 			MessageData* md = CCP_NEW( "PyLoadMessageData/md" ) MessageData;
+			ScopeGuard mdGuard = MakeGuard([&] { CCP_DELETE md; });
 
 			// We use PyTuple_GET_ITEM for speed - we've already checked that we have a tuple
 			// and that it is of the correct size. Also remember that PyTuple_GET_ITEM returns
@@ -159,6 +169,7 @@ PyObject* PyLoadMessageData( PyObject* module, PyObject* args )
 			md->text = PyUnicodeToWString( text );
 
 			mm[id] = md;
+			mdGuard.Dismiss();
 		}
 
 		LanguageMap::iterator oldLang = g_settings.languages.find( langID );
@@ -183,6 +194,356 @@ PyObject* PyLoadMessageData( PyObject* module, PyObject* args )
 	Py_RETURN_NONE;
 }
 MAP_FUNCTION( "LoadMessageData", PyLoadMessageData, "Load the message data we are operating on." );
+
+// -------------------------------------------------------------
+// Description:
+//   Converts a flatbuffer VariableTypes enum to an eveLocalization
+//   VariableType.
+// Arguments:
+//   fbType - The flatbuffer VariableTypes enum value to convert.
+// Return value:
+//   The corresponding eveLocalization VariableType enum value.
+// -------------------------------------------------------------
+bool ConvertVariableType(eve::localization::VariableTypes fbType, VariableType& outType) {
+	switch (fbType) {
+		case eve::localization::VariableTypes_character:
+			outType = VARIABLETYPE_CHARACTER;
+			return true;
+		case eve::localization::VariableTypes_npcOrganization:
+			outType = VARIABLETYPE_NPCORGANIZATION;
+			return true;
+		case eve::localization::VariableTypes_item:
+			outType = VARIABLETYPE_ITEM;
+			return true;
+		case eve::localization::VariableTypes_location:
+			outType = VARIABLETYPE_LOCATION;
+			return true;
+		case eve::localization::VariableTypes_characterlist:
+			outType = VARIABLETYPE_CHARACTERLIST;
+			return true;
+		case eve::localization::VariableTypes_messageid:
+			outType = VARIABLETYPE_MESSAGE;
+			return true;
+		case eve::localization::VariableTypes_datetime:
+			outType = VARIABLETYPE_DATETIME;
+			return true;
+		case eve::localization::VariableTypes_formattedtime:
+			outType = VARIABLETYPE_FORMATTEDTIME;
+			return true;
+		case eve::localization::VariableTypes_timeinterval:
+			outType = VARIABLETYPE_TIMEINTERVAL;
+			return true;
+		case eve::localization::VariableTypes_numeric:
+			outType = VARIABLETYPE_NUMERIC;
+			return true;
+		case eve::localization::VariableTypes_generic:
+			outType = VARIABLETYPE_GENERIC;
+			return true;
+		default:
+			return false;
+	}
+}
+
+// -------------------------------------------------------------
+// Description:
+//   Loads flatbuffer message data from a Python buffer object, then creates or updates the
+//   eveLocalization storage for the given language. This function parses the
+//   flatbuffer data structure and converts it to the internal MessageData format,
+//   including text, metadata, and tokens.
+// Arguments:
+//   module - Ignored
+//   args - The language for which we provide the messages and a buffer-compatible
+//   Python object containing the flatbuffer data.
+// Return value:
+//   None.
+// -------------------------------------------------------------
+PyObject* PyLoadMessageDataFromFlatbuffer( PyObject* module, PyObject* args )
+{
+	CCP_STATS_ZONE( __FUNCTION__ );
+
+	char* languageCode = 0;
+	Py_buffer buffer;
+
+	if ( ! PyArg_ParseTuple( args, "ss*", &languageCode, &buffer ) )
+	{
+		return nullptr;
+	}
+
+	// Verify the flatbuffer data
+	flatbuffers::Verifier verifier( reinterpret_cast<const uint8_t*>(buffer.buf), buffer.len );
+	if ( ! eve::localization::VerifyAllMessagesBuffer( verifier ) )
+	{
+		PyErr_SetString( PyExc_ValueError, "Flatbuffer data failed verification" );
+		return nullptr;
+	}
+
+	// Get the root messages object
+	const eve::localization::AllMessages* allMessages = eve::localization::GetAllMessages( buffer.buf );
+	if ( ! allMessages )
+	{
+		PyErr_SetString( PyExc_ValueError, "Failed to get the root object from the flatbuffer" );
+		return nullptr;
+	}
+
+	if ( ! allMessages->messages() || allMessages->messages()->size() == 0 )
+	{
+		PyErr_SetString( PyExc_ValueError, "Flatbuffer does not contain any messages" );
+		return nullptr;
+	}
+
+	const auto* fbMessages = allMessages->messages();
+
+	// Create the language object
+	LanguageID langID = CodeToLanguageID( languageCode );
+	Language* lang = CCP_NEW( "PyLoadMessageFromFlatbuffer/Language" ) Language( langID );
+	MessageMap& mm = lang->data;
+
+	// Iterate through the messages and populate our message map
+	for ( const auto fbMessagePtr : *fbMessages )
+	{
+		if ( ! fbMessagePtr )
+		{
+			PyErr_SetString( PyExc_ValueError, "Encountered a null message pointer while iterating through messages" );
+			return nullptr;
+		}
+		const auto& fbMessage = *fbMessagePtr;
+
+		MessageData* md = CCP_NEW( "PyLoadMessageDataFromFlatbuffer/MessageData" ) MessageData();
+		ScopeGuard mdGuard = MakeGuard([&] { CCP_DELETE md; });
+
+		// id
+		MessageID msgID = fbMessage.id();
+
+		// text
+		std::wstring msgText;
+		if ( fbMessage.text() )
+		{
+			msgText = UTF8ToWide( fbMessage.text()->str() );
+		}
+		md->text = msgText;
+
+		// metadata
+		MetaDataPtr metaData = CCP_NEW( "PyLoadMessageDataFromFlatbuffer/MetaData" ) MetaData();
+		if ( fbMessage.metadata() && fbMessage.metadata()->size() > 0 )
+		{
+			for ( const auto& fbMeta : *fbMessage.metadata() )
+			{
+				if ( fbMeta->property_name() && fbMeta->text() )
+				{
+					std::string propertyName = fbMeta->property_name()->str();
+					if ( fbMeta->text() )
+					{
+						metaData->insert( MetaData::value_type( propertyName, UTF8ToWide( fbMeta->text()->str() ) ) );
+					}
+				}
+			}
+		}
+		md->metaData = metaData;
+
+		// tokens
+		TokenContainerPtr tokens = CCP_NEW( "PyLoadMessageDataFromFlatbuffer/TokenContainer" ) TokenContainer();
+		if ( fbMessage.tokens() && fbMessage.tokens()->size() > 0 )
+		{
+			for ( const auto& fbToken : *fbMessage.tokens() )
+			{
+				Token* token = CCP_NEW( "PyLoadMessageDataFromFlatbuffer/Token" ) Token();
+
+				// markup
+				std::wstring markup;
+				if ( fbToken->markup() )
+				{
+					markup = UTF8ToWide( fbToken->markup()->str() );
+				}
+				else
+				{
+					CCP_DELETE token;
+					PyErr_SetString( PyExc_ValueError, "Encountered a null markup pointer while processing tokens" );
+					return nullptr;
+				}
+				token->tagName = markup;
+
+				// variableType
+				if ( ! ConvertVariableType( fbToken->variable_type(), token->variableType ) )
+				{
+					CCP_DELETE token;
+					PyErr_SetString( PyExc_ValueError, "Failed to convert variable type while processing tokens" );
+					return nullptr;
+				}
+
+				// variableName
+				if ( fbToken->variable_name() )
+				{
+					token->variableName = fbToken->variable_name()->str();
+				}
+
+				// propertyName
+				if ( fbToken->property_name() )
+				{
+					token->propertyName = fbToken->property_name()->str();
+				}
+
+				// flags
+				token->flags = static_cast<TokenFlags>( fbToken->args() );
+
+				// kwargs
+				if ( fbToken->kwargs() && fbToken->kwargs()->size() > 0 )
+				{
+					token->kwargs = CCP_NEW( "PyLoadMessageDataFromFlatbuffer/KeywordArgs" ) KeywordArgs;
+
+					for ( const auto& fbKwarg : *fbToken->kwargs() )
+					{
+						if ( ! fbKwarg->key() || ! fbKwarg->value() )
+						{
+							PyErr_SetString( PyExc_ValueError, "Encountered a null key or value pointer while processing kwargs" );
+							return nullptr;
+						}
+
+						std::string key = fbKwarg->key()->str();
+						PyObject* value = nullptr;
+						if ( fbKwarg->value_type() == eve::localization::KwargValue_KwargNumber )
+						{
+							const eve::localization::KwargNumber* kwarg_number = fbKwarg->value_as_KwargNumber();
+							if( ! kwarg_number ) {
+								PyErr_SetString( PyExc_ValueError, "Encountered a null KwargNumber pointer while processing kwargs" );
+								return nullptr;
+							}
+							value = PyLong_FromLongLong( kwarg_number->value() );
+						}
+						else if ( fbKwarg->value_type() == eve::localization::KwargValue_KwargString )
+						{
+							const eve::localization::KwargString* kwarg_string = fbKwarg->value_as_KwargString();
+							if( ! kwarg_string ) {
+								PyErr_SetString( PyExc_ValueError, "Encountered a null KwargString pointer while processing kwargs" );
+								return nullptr;
+							}
+							if( ! kwarg_string->value() ) {
+								PyErr_SetString( PyExc_ValueError, "Encountered a null KwargString value pointer while processing kwargs" );
+								return nullptr;
+							}
+							std::string strValue = kwarg_string->value()->str();
+							value = PyUnicode_FromStringAndSize( strValue.c_str(), strValue.size() );
+						}
+						else
+						{
+							PyErr_SetString( PyExc_ValueError, "Encountered an unknown kwarg value type while processing kwargs" );
+							return nullptr;
+						}
+
+						if ( value )
+						{
+							token->kwargs->insert( KeywordArgs::value_type( key, value ) );
+						}
+					}
+				}
+
+				// conditional_values
+				if ( fbToken->conditional_values() && fbToken->conditional_values()->size() > 0 )
+				{
+					for ( size_t i = 0; i < fbToken->conditional_values()->size(); ++i )
+					{
+						const flatbuffers::String* cv = fbToken->conditional_values()->Get( i );
+						if ( cv )
+						{
+							token->conditionalValues[i] = UTF8ToWide( cv->str() );
+						}
+					}
+				}
+
+				// This workaround section comes from the LoadTokens and LoadToken
+				// functions (legacy)
+
+				// -- BEGIN NO TOKENIZER UPDATES POSSIBLE WORKAROUND --
+				// Temporary work around until we update the pickle generator again
+				if ( token->variableType == VARIABLETYPE_DATETIME || token->variableType == VARIABLETYPE_FORMATTEDTIME )
+				{
+					// inject the formatting string
+					if ( ! token->kwargs )
+					{
+						token->kwargs = CCP_NEW( "eveLocalization/KeywordArgs" ) KeywordArgs();
+					}
+					if ( token->kwargs->find( "format" ) == token->kwargs->cend() )
+					{
+						token->kwargs->insert( KeywordArgs::value_type( "format", PyUnicode_FromString( "%Y.%m.%d %H:%M" ) ) );
+					}
+				}
+
+				// timeinterval needs special handling as it's the only property handler
+				// with a default property that does not return the input value
+				if ( token->variableType == VARIABLETYPE_TIMEINTERVAL )
+				{
+					// inject the default property name
+					if ( token->propertyName.empty() )
+					{
+						token->propertyName = "shortForm";
+					}
+				}
+
+				// see if we need leading zeroes
+				if ( token->kwargs && token->kwargs->find( "leadingZeroes" ) != token->kwargs->cend() )
+				{
+					token->flags |= TOKENFLAG_LEADINGZEROES;
+				}
+
+				// Quantity kwarg superseeds a quantity flag because the quantity comes
+				// from kwargs
+				if ( token->kwargs && token->kwargs->find( "quantity" ) != token->kwargs->cend() )
+				{
+					if ( ( token->flags & TOKENFLAG_QUANTITY ) == TOKENFLAG_QUANTITY )
+					{
+						token->flags ^= TOKENFLAG_QUANTITY;
+					}
+				}
+
+				// temporarily keep support for linkify
+				if ( token->tagName.find( L"linkify" ) != std::wstring::npos )
+				{
+					token->flags |= TOKENFLAG_LINKIFY;
+				}
+
+				if ( token->tagName.find( L"linkinfo" ) != std::wstring::npos )
+				{
+					token->flags |= TOKENFLAG_LINKINFO;
+				}
+
+				// -- END WORKAROUND --
+
+				// Done with token
+				tokens->insert( TokenContainer::value_type( token->tagName, token ) );
+			}
+		}
+		md->tokens = tokens;
+
+		mm[msgID] = md;
+		mdGuard.Dismiss();
+	}
+
+	// The language object is now populated, so we can insert it into g_settings,
+	// or update the existing one.
+
+	LanguageMap::iterator oldLang = g_settings.languages.find( langID );
+	if ( oldLang != g_settings.languages.end() )
+	{
+		CCP_STATS_ZONE( "Updating language" );
+
+		// update the already-existing language with new data
+		for ( MessageMap::iterator i = lang->data.begin(); i != lang->data.end(); ++i )
+		{
+			oldLang->second->data[i->first] = i->second;
+		}
+	}
+	else
+	{
+		CCP_STATS_ZONE( "Inserting language" );
+
+		// insert the new language
+		g_settings.languages.insert( LanguageMap::value_type( langID, lang ) );
+	}
+
+	PyBuffer_Release( &buffer );
+
+	Py_RETURN_NONE;
+}
+MAP_FUNCTION( "LoadMessageDataFromFlatbuffer", PyLoadMessageDataFromFlatbuffer, "Load the message data we are operating on from a flatbuffer buffer." );
 
 // -------------------------------------------------------------
 // Description:

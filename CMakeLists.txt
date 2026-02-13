@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.30)
 
 project(EveLocalization VERSION 1.0.0)
 
@@ -20,6 +20,25 @@ include(CcpGlobalSettings)
 
 find_package(Blue CONFIG REQUIRED)
 find_package(BlueExposure CONFIG REQUIRED)
+find_package(CcpCore CONFIG REQUIRED)
+
+include(FetchContent)
+
+FetchContent_Declare(
+    flatbuffers
+    GIT_REPOSITORY https://github.com/google/flatbuffers
+    GIT_TAG v25.2.10
+    PATCH_COMMAND git apply ${CMAKE_CURRENT_SOURCE_DIR}/flatc-dont-force-MT-flag.patch
+)
+
+set(FLATBUFFERS_INSTALL OFF CACHE BOOL "" FORCE)
+set(FLATBUFFERS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(flatbuffers)
+
+flatbuffers_generate_headers(
+    TARGET FlatbuffersGeneratedHeaders
+    SCHEMAS ${CMAKE_CURRENT_SOURCE_DIR}/messages.fbs
+)
 
 set(headers
     autoversion.h
@@ -49,7 +68,7 @@ add_library(EveLocalization SHARED
     ${headers}
     ${sources}
 )
-target_link_libraries(EveLocalization PRIVATE Blue BlueExposure)
+target_link_libraries(EveLocalization PRIVATE Blue BlueExposure CcpCore flatbuffers FlatbuffersGeneratedHeaders)
 
 target_precompile_headers(EveLocalization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/stdafx.h)
 target_include_directories(EveLocalization PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -94,3 +113,5 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
         PATTERN "package.yaml"
     )
 endif()
+
+add_subdirectory(test_module)

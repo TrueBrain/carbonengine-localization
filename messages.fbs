@@ -1,0 +1,74 @@
+namespace eve.localization;
+
+table Metadata {
+    property_name: string;
+    text: string;
+}
+
+table KwargNumber {
+    value: uint8;
+}
+
+table KwargString {
+    value: string;
+}
+
+union KwargValue {
+    KwargNumber,
+    KwargString
+}
+
+table Kwarg {
+    key: string;
+    value: KwargValue;
+}
+
+enum VariableTypes: byte {
+    character = 0,
+    npcOrganization,
+    item,
+    location,
+    characterlist,
+    messageid,
+    datetime,
+    formattedtime,
+    timeinterval,
+    numeric,
+    generic,
+}
+
+enum ArgFlag: uint16{
+    linkify = 1,
+    capitalize = 2,
+    uppercase = 4,
+    lowercase = 8,
+    titlecase = 16,
+    useGrouping = 32,
+    conditional = 64,
+    quantity = 256,
+    decimalPlaces = 512,
+    leadingZeroes = 1024
+}
+
+table Token {
+    markup: string;
+    variable_type: VariableTypes;
+    variable_name: string;
+    property_name: string;
+    args: uint16;
+    kwargs: [Kwarg];
+    conditional_values: [string];
+}
+
+table Message {
+    id: uint64 (key);
+    text: string;
+    tokens: [Token];
+    metadata: [Metadata];
+}
+
+table AllMessages {
+    messages: [Message];
+}
+
+root_type AllMessages;

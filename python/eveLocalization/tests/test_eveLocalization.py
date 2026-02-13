@@ -7,7 +7,7 @@ from collections import OrderedDict
 import unittest
 import blue
 import eveLocalization as el
-
+import EveLocalizationTest
 
 def GetTestData():
     testData = {
@@ -300,6 +300,62 @@ class LocalizationUnittests(unittest.TestCase):
         data = el.GetMessageDataByID(2, "en-us")
         self.assertTrue(data == testData["en-us"][2], "message data storage does not return the same data for ID 2.")
 
+    def testLoadingFlatbufferData(self):
+        """
+        Test loading message data from a flatbuffer byte array in memory
+        """
+        
+        # Load the flatbuffer data from memory
+        el.LoadMessageDataFromFlatbuffer("en-us", EveLocalizationTest.GenerateValidFlatbuffersTestData())
+        
+        # Test Message 0: Simple message with no tags
+        self.assertTrue(el.IsValidMessageID(0, "en-us"), "Message ID 0 should exist")
+        result = el.GetMessageByID(0, "en-us")
+        expectedResult = u"This is a simple test message."
+        self.assertEqual(result, expectedResult, 
+                        "Message 0 text mismatch: %s != %s" % (result, expectedResult))
+        
+        # Test Message 1: Message with a generic token
+        self.assertTrue(el.IsValidMessageID(1, "en-us"), "Message ID 1 should exist")
+        result = el.GetMessageByID(1, "en-us", name="World")
+        expectedResult = u"Hello World!"
+        self.assertEqual(result, expectedResult,
+                        "Message 1 text mismatch: %s != %s" % (result, expectedResult))
+        
+        # Test Message 2: Message with metadata
+        self.assertTrue(el.IsValidMessageID(2, "en-us"), "Message ID 2 should exist")
+        result = el.GetMessageByID(2, "en-us")
+        expectedResult = u"Test message with metadata"
+        self.assertEqual(result, expectedResult,
+                        "Message 2 text mismatch: %s != %s" % (result, expectedResult))
+        metadata = el.GetMetaDataByID(2, "context", "en-us")
+        expectedMetadata = u"test_context"
+        self.assertEqual(metadata, expectedMetadata,
+                        "Message 2 metadata mismatch: %s != %s" % (metadata, expectedMetadata))
+        
+        # Test Message 3: Message with numeric token and kwargs
+        self.assertTrue(el.IsValidMessageID(3, "en-us"), "Message ID 3 should exist")
+        result = el.GetMessageByID(3, "en-us", count=5)
+        expectedResult = u"You have 5 items."
+        self.assertEqual(result, expectedResult,
+                        "Message 3 text mismatch: %s != %s" % (result, expectedResult))
+
+    def testLoadingFlatbufferDataFailures(self):
+        """
+        Test error handling for LoadMessageDataFromFlatbuffer
+        """
+        # Empty buffer
+        empty_buffer = bytearray([])
+        self.assertRaises(ValueError, el.LoadMessageDataFromFlatbuffer,
+                         "en-us", empty_buffer)
+        
+        # Invalid flatbuffer data
+        self.assertRaises(ValueError, el.LoadMessageDataFromFlatbuffer,
+                         "en-us", EveLocalizationTest.GenerateInvalidFlatbuffersTestData())
+        
+        # Valid flatbuffer structure but no messages
+        self.assertRaises(ValueError, el.LoadMessageDataFromFlatbuffer,
+                         "en-us", EveLocalizationTest.GenerateEmptyFlatbuffersTestData())
 
     def testParser(self):
         """
